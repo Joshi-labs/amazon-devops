@@ -76,6 +76,14 @@ pipeline {
             }
         }
 
+        stage('Trivy Filesystem Scan') {
+            steps {
+                sh 'trivy fs --exit-code 0 --format table .'
+            }
+        }
+
+
+
         stage('Install Dependencies') {
             steps {
                 sh 'npm ci'
@@ -94,6 +102,18 @@ pipeline {
                     docker build \
                         -t ${IMAGE_NAME}:${IMAGE_TAG} \
                         -t ${IMAGE_NAME}:latest .
+                """
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh """
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 1 \
+                        --format table \
+                        ${IMAGE_NAME}:latest
                 """
             }
         }
