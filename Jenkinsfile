@@ -12,8 +12,14 @@ pipeline {
     }
 
     environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+
         IMAGE_NAME = "vishwashjoshi/amazon-devops"
         IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
+    triggers {
+        githubPush()
     }
 
     stages {
@@ -27,6 +33,28 @@ pipeline {
         stage('Checkout Source') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh """
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=amazon-devops \
+                        -Dsonar.projectName=amazon-devops \
+                        -Dsonar.sources=. \
+                        -Dsonar.sourceEncoding=UTF-8
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
@@ -46,8 +74,8 @@ pipeline {
             steps {
                 sh """
                     docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                    -t ${IMAGE_NAME}:latest .
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                        -t ${IMAGE_NAME}:latest .
                 """
             }
         }
@@ -61,7 +89,6 @@ pipeline {
                         passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
-
                     sh '''
                         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
@@ -77,7 +104,7 @@ pipeline {
 
     post {
         success {
-            echo "Docker image pushed successfully!"
+            echo "Pipeline completed successfully!"
         }
 
         failure {
