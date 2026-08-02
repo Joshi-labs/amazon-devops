@@ -58,6 +58,24 @@ pipeline {
             }
         }
 
+        stage('OWASP Dependency Check') {
+            steps {
+                dependencyCheck(
+                    odcInstallation: 'dependency-check',
+                    additionalArguments: '--scan . --format XML --format HTML',
+                    nvdCredentialsId: 'nvd-api-key'
+                )
+            }
+        }
+
+        stage('Publish OWASP Report') {
+            steps {
+                dependencyCheckPublisher(
+                    pattern: '**/dependency-check-report.xml'
+                )
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh 'npm ci'
