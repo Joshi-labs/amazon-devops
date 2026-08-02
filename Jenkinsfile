@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar'
 
         IMAGE_NAME = "vishwashjoshi/amazon-devops"
         IMAGE_TAG  = "${BUILD_NUMBER}"
