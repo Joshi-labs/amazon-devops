@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = "YOUR_DOCKERHUB_USERNAME/amazon-devops"
+        IMAGE_NAME = "vishwashjoshi/amazon-devops"
         IMAGE_TAG  = "${BUILD_NUMBER}"
     }
 
