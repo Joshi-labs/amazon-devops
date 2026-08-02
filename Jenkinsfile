@@ -1,13 +1,30 @@
 pipeline {
     agent any
 
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+        timestamps()
+    }
+
     tools {
-        nodejs 'node26'
+        nodejs 'Node22'
+    }
+
+    environment {
+        IMAGE_NAME = "YOUR_DOCKERHUB_USERNAME/amazon-devops"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Source') {
             steps {
                 checkout scm
             }
@@ -27,8 +44,48 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t amazon-devops:latest .'
+                sh """
+                    docker build \
+                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                    -t ${IMAGE_NAME}:latest .
+                """
             }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Docker image pushed successfully!"
+        }
+
+        failure {
+            echo "Pipeline failed!"
+        }
+
+        always {
+            cleanWs()
         }
     }
 }
